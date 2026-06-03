@@ -1,14 +1,25 @@
 import { useState, type FormEvent } from 'react'
+import { parseGithubUrl, type ParsedRepo } from './parseGithubUrl'
 
 function App() {
   const [url, setUrl] = useState('')
-  const [submittedUrl, setSubmittedUrl] = useState('')
+//  const [submittedUrl, setSubmittedUrl] = useState('')
+  const [parsedRepo, setParsedRepo] = useState<ParsedRepo | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setSubmittedUrl(url.trim())
+    setError('')
+    setParsedRepo(null)
+  
+    try {
+      const result = parseGithubUrl(url)
+      setParsedRepo(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Onbekende fout')
+    }
   }
-
+  
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <main className="mx-auto max-w-2xl px-4 py-16">
@@ -21,7 +32,8 @@ function App() {
 
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-3 sm:flex-row">
           <input
-            type="url"
+            type="text"
+            inputMode="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://github.com/dekscodes/dekscodes-laravel-movies"
@@ -36,11 +48,24 @@ function App() {
           </button>
         </form>
 
-        {submittedUrl && (
-          <p className="mt-6 rounded-lg border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-300">
-            Ingediende URL:{' '}
-            <span className="font-mono text-violet-300">{submittedUrl}</span>
-          </p>
+        {error && 
+          (
+            <p className="mt-6 rounded-lg border border-red-900 bg-red-950/50 p-4 text-sm text-red-300">
+              {error}
+            </p>
+          )
+        }
+        {parsedRepo && (
+          <div className="mt-6 rounded-lg border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-300">
+            <p>
+              <span className="text-slate-400">Owner:</span>{' '}
+              <span className="font-mono text-violet-300">{parsedRepo.owner}</span>
+            </p>
+            <p className="mt-2">
+              <span className="text-slate-400">Repo:</span>{' '}
+              <span className="font-mono text-violet-300">{parsedRepo.repo}</span>
+            </p>
+          </div>
         )}
       </main>
     </div>
