@@ -1,23 +1,34 @@
 import { useState, type FormEvent } from 'react'
 import { parseGithubUrl, type ParsedRepo } from './parseGithubUrl'
+import { fetchRepoData, type RepoData } from './fetchRepoData'
 
 function App() {
   const [url, setUrl] = useState('')
-//  const [submittedUrl, setSubmittedUrl] = useState('')
+  const [repoData, setRepoData] = useState<RepoData | null>(null)
+  const [loading, setLoading] = useState(false)
   const [parsedRepo, setParsedRepo] = useState<ParsedRepo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setParsedRepo(null)
+    setRepoData(null)
   
     try {
       const result = parseGithubUrl(url)
       setParsedRepo(result)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Onbekende fout')
+
+      setLoading(true)
+      const data = await fetchRepoData(result.owner, result.repo)
+      setRepoData(data)
+    } catch (err) 
+    {
+      setError(err instanceof Error ? err.message : 'Failed to parse repository URL')
+    } finally {
+      setLoading(false)
     }
+    
   }
   
   return (
@@ -42,9 +53,10 @@ function App() {
           />
           <button
             type="submit"
-            className="rounded-lg bg-violet-600 px-6 py-3 font-medium text-white transition hover:bg-violet-500"
+            disabled={loading}
+            className="rounded-lg bg-violet-600 px-6 py-3 font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
           >
-            Analyze
+            {loading ? 'Analyzing...' : 'Analyze'}
           </button>
         </form>
 
@@ -67,7 +79,24 @@ function App() {
             </p>
           </div>
         )}
+          {repoData && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Stat label="Stars" value={String(repoData.stars)} />
+              <Stat label="Open issues" value={String(repoData.openIssues)} />
+              <Stat label="Language" value={repoData.language ?? 'Unknown'} />
+              <Stat label="Last update" value={new Date(repoData.lastUpdate).toLocaleDateString()} />
+            </div>
+          )}
       </main>
+    </div>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 font-mono text-violet-300">{value}</p>
     </div>
   )
 }
